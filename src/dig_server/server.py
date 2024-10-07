@@ -68,7 +68,9 @@ async def create_task(
             prev_task = Task.get(Task.task_id == task_id)
             prev_task.status = "pending"
             prev_task.prompt = prompt_request.prompt
-            prev_task.extra_args = json.dumps(prompt_request.extra_args, ensure_ascii=False)
+            prev_task.extra_args = json.dumps(
+                prompt_request.extra_args, ensure_ascii=False
+            )
             prev_task.save()
         else:
             Task.create(

@@ -84,11 +84,19 @@ async def main():
                     [task["prompt"] for task in tasks],
                     [task["extra_args"].get("seeds", -1) for task in tasks],
                 )
-                for task, image in zip(tasks, images):
-                    await complete_task(task["task_id"], image)
+                await asyncio.gather(
+                    *[
+                        complete_task(task["task_id"], image)
+                        for task, image in zip(tasks, images)
+                    ]
+                )
             except Exception as e:
-                for task in tasks:
-                    await client.get(f"http://localhost:8000/reset/{task['task_id']}")
+                await asyncio.gather(
+                    *[
+                        client.get(f"http://localhost:8000/reset/{task['task_id']}")
+                        for task in tasks
+                    ]
+                )
                 raise e
         else:
             print("No task available, waiting...")

@@ -92,7 +92,7 @@ async def main():
         tasks.append(
             request_image_generation(gen_prompt2, f"{index}-tipo-ext", int(index))
         )
-    await asyncio.gather(*tasks[:16])
+    await asyncio.gather(*tasks[:2000])
 
 
 if __name__ == "__main__":

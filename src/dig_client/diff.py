@@ -14,7 +14,11 @@ from diffusers import (
 from transformers import set_seed
 from k_diffusion.external import CompVisDenoiser
 from k_diffusion.sampling import get_sigmas_polyexponential
-from k_diffusion.sampling import sample_dpmpp_2m_sde, sample_euler, sample_euler_ancestral
+from k_diffusion.sampling import (
+    sample_dpmpp_2m_sde,
+    sample_euler,
+    sample_euler_ancestral,
+)
 
 torch.set_float32_matmul_precision("medium")
 
@@ -299,9 +303,7 @@ def generate(
             ).to(prompt_embeds)
         )
     x0 = torch.concat(x0s) * sigmas[0]
-    result = sample_euler(
-        cfg_wrapper, x0, sigmas.to(prompt_embeds.device)
-    )
+    result = sample_euler(cfg_wrapper, x0, sigmas.to(prompt_embeds.device))
     result /= pipe.vae.config.scaling_factor
     image_tensors = []
     for latent in result:
