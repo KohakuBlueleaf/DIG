@@ -1,18 +1,24 @@
 import os
-import shutil
+import json
+import io
 from uuid import uuid4
 from contextlib import asynccontextmanager
+from typing import Optional
 
-from pydantic import BaseModel
+from PIL import Image
+from pydantic import BaseModel, Field
 from peewee import fn, SqliteDatabase, IntegrityError
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 
 from .db import database_proxy, Task, initialize_db
 
 
 class PromptRequest(BaseModel):
     prompt: str
+    extra_args: Optional[dict[str, int | float | str | bool]] = Field(
+        default_factory=dict
+    )
 
 
 class TaskResponse(BaseModel):
@@ -22,6 +28,7 @@ class TaskResponse(BaseModel):
 class TaskRequest(BaseModel):
     task_id: str
     prompt: str
+    extra_args: dict[str, int | float | str | bool] = Field(default_factory=dict)
 
 
 def get_db():
@@ -37,7 +44,7 @@ def get_db():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    db_path = os.environ.get("DB_PATH", "image_tasks.db")
+    db_path = os.environ.get("DB_PATH", "db/image_tasks.db")
     initialize_db(db_path)
     yield
     # Shutdown
@@ -52,9 +59,16 @@ app = FastAPI(lifespan=lifespan)
 async def create_task(
     prompt_request: PromptRequest, db: SqliteDatabase = Depends(get_db)
 ):
-    task_id = str(uuid4())
+    if "task_id" in prompt_request.extra_args:
+        task_id = prompt_request.extra_args.pop("task_id")
+    else:
+        task_id = str(uuid4())
     with db.atomic():
-        Task.create(task_id=task_id, prompt=prompt_request.prompt)
+        Task.create(
+            task_id=task_id,
+            prompt=prompt_request.prompt,
+            extra_args=json.dumps(prompt_request.extra_args, ensure_ascii=False),
+        )
     return TaskResponse(task_id=task_id)
 
 
@@ -70,7 +84,11 @@ async def get_task(db: SqliteDatabase = Depends(get_db)):
             )
             task.status = "processing"
             task.save()
-            return TaskRequest(task_id=task.task_id, prompt=task.prompt)
+            return TaskRequest(
+                task_id=task.task_id,
+                prompt=task.prompt,
+                extra_args=json.loads(task.extra_args or "{}"),
+            )
         except Task.DoesNotExist:
             raise HTTPException(status_code=404, detail="No pending tasks available")
         except IntegrityError:
@@ -96,14 +114,13 @@ async def complete_task(
                 status_code=400, detail="Task is not in processing state"
             )
 
-        # Save the uploaded image
-        image_path = f"images/{task_id}.png"
-        os.makedirs(os.path.dirname(image_path), exist_ok=True)
-        with open(image_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
+        image.file.seek(0)
+        img = Image.open(image.file)
+        result = io.BytesIO()
+        img.save(result, format="WEBP")
 
         task.status = "completed"
-        task.image_path = image_path
+        task.image_data = result.getvalue()
         task.save()
 
     return {"message": "Task completed successfully"}
@@ -118,9 +135,10 @@ async def download_image(task_id: str, db: SqliteDatabase = Depends(get_db)):
             status_code=404, detail="Image not found or task not completed"
         )
 
-    return FileResponse(
-        task.image_path, media_type="image/png", filename=f"{task_id}.png"
-    )
+    if not task.image_data:
+        raise HTTPException(status_code=404, detail="Image data not found")
+
+    return Response(content=task.image_data, media_type="image/webp")
 
 
 if __name__ == "__main__":

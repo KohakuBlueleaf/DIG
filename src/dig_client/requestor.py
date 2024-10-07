@@ -1,8 +1,10 @@
+import os
 import asyncio
 import httpx
 
 
 client = httpx.AsyncClient()
+
 
 async def request_image_generation(prompt: str):
     response = await client.post(
@@ -19,10 +21,14 @@ async def request_image_generation(prompt: str):
 
 async def check_image_status(task_id: str):
     while True:
-        response = await client.get(f"http://localhost:8000/download/{task_id}")
+        try:
+            response = await client.get(f"http://localhost:8000/download/{task_id}")
+        except httpx.ReadError:
+            continue
         if response.status_code == 200:
             # Image is ready
-            filename = f"download/downloaded_{task_id}.png"
+            os.makedirs("download", exist_ok=True)
+            filename = f"download/downloaded_{task_id}.webp"
             with open(filename, "wb") as f:
                 f.write(response.content)
             print(f"Image downloaded and saved as {filename}")
@@ -37,7 +43,7 @@ async def check_image_status(task_id: str):
 
 async def main():
     prompt = "A beautiful sunset over the ocean"
-    tasks = [request_image_generation(prompt) for _ in range(128)]
+    tasks = [request_image_generation(prompt) for _ in range(16)]
     tasks = await asyncio.gather(*tasks)
     finish_tasks = [check_image_status(task_id) for task_id in tasks if task_id]
     await asyncio.gather(*finish_tasks)

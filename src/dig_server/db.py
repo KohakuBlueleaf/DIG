@@ -11,15 +11,16 @@ class BaseModel(Model):
 
 
 class Task(BaseModel):
-    task_id = CharField(unique=True)
+    task_id = CharField(unique=True, index=True)
     prompt = TextField()
+    extra_args = TextField(null=True)
+    image_path = CharField(null=True)
+    image_data = BlobField(null=True)
     status = CharField(default="pending")  # pending, processing, completed
     created_at = DateTimeField(default=datetime.datetime.now)
-    updated_at = DateTimeField(default=datetime.datetime.now)
-    image_path = CharField(null=True)
 
 
-def initialize_db(db_path="image_tasks.db"):
+def initialize_db(db_path="db/image_tasks.db"):
     database = SqliteDatabase(
         db_path, pragmas={"journal_mode": "wal", "synchronous": "normal"}
     )
@@ -32,7 +33,9 @@ def create_tables():
 
 
 if __name__ == "__main__":
-    db_path = os.environ.get("DB_PATH", "image_tasks.db")
+    db_path = os.environ.get("DB_PATH", "db/image_tasks.db")
+    directory = os.path.dirname(db_path)
+    os.makedirs(directory, exist_ok=True)
     initialize_db(db_path)
     create_tables()
     print("Database initialized and tables created.")

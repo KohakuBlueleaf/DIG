@@ -6,6 +6,7 @@ import random
 
 client = httpx.AsyncClient()
 
+
 async def get_task():
     while True:
         response = await client.get("http://localhost:8000/task")
@@ -22,7 +23,7 @@ async def get_task():
             return None
 
 
-def generate_random_image(size=(256, 256)):
+def generate_random_image(size=(1024, 1024)):
     image = Image.new("RGB", size)
     pixels = image.load()
     for i in range(size[0]):
@@ -59,7 +60,7 @@ async def main():
             await complete_task(task["task_id"], image)
         else:
             print("No task available, waiting...")
-            await asyncio.sleep(5)  # Wait for 5 seconds before checking for new tasks
+            await asyncio.sleep(2)  # Wait for 5 seconds before checking for new tasks
 
 
 if __name__ == "__main__":
