@@ -64,12 +64,28 @@ async def create_task(
     else:
         task_id = str(uuid4())
     with db.atomic():
-        Task.create(
-            task_id=task_id,
-            prompt=prompt_request.prompt,
-            extra_args=json.dumps(prompt_request.extra_args, ensure_ascii=False),
-        )
+        if Task.select().where(Task.task_id == task_id).exists():
+            prev_task = Task.get(Task.task_id == task_id)
+            prev_task.status = "pending"
+            prev_task.prompt = prompt_request.prompt
+            prev_task.extra_args = json.dumps(prompt_request.extra_args, ensure_ascii=False)
+            prev_task.save()
+        else:
+            Task.create(
+                task_id=task_id,
+                prompt=prompt_request.prompt,
+                extra_args=json.dumps(prompt_request.extra_args, ensure_ascii=False),
+            )
     return TaskResponse(task_id=task_id)
+
+
+@app.get("/reset/{task_id}")
+async def reset_task(task_id: str, db: SqliteDatabase = Depends(get_db)):
+    with db.atomic():
+        task = Task.get(Task.task_id == task_id)
+        task.status = "pending"
+        task.save()
+    return {"message": "Task reset successfully"}
 
 
 @app.get("/task", response_model=TaskRequest)
