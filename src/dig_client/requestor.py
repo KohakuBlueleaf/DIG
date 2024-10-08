@@ -152,7 +152,9 @@ async def main_dan_scenery():
         #     request_image_generation(org_prompt1, f"dan-scenery-{index}", int(index))
         # )
         tasks.append(
-            request_image_generation(gen_prompt1, f"dan-scenery-{index}-promptist", int(index))
+            request_image_generation(
+                gen_prompt1, f"dan-scenery-{index}-promptist", int(index)
+            )
         )
     for batch in tqdm(
         [tasks[i : i + 100] for i in range(0, len(tasks), 100)],

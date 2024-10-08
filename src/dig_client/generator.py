@@ -60,9 +60,7 @@ async def complete_task(task_id: str, image: Image.Image):
     img_byte_arr = img_byte_arr.getvalue()
 
     files = {"image": ("image.webp", img_byte_arr, "image/webp")}
-    response = await client.post(
-        f"{config.SERVER_URL}/complete/{task_id}", files=files
-    )
+    response = await client.post(f"{config.SERVER_URL}/complete/{task_id}", files=files)
     if response.status_code == 200:
         print(f"Task {task_id} completed successfully")
     else:
