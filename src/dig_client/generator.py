@@ -8,15 +8,16 @@ from PIL import Image
 
 from .diff import load_model, generate, encode_prompts
 from .meta import DEFAULT_NEGATIVE_PROMPT
+from . import config
 
 
-client = httpx.AsyncClient()
-pipe = load_model("stabilityai/stable-diffusion-xl-base-1.0", custom_vae=True)
+client = httpx.AsyncClient(timeout=3600)
+pipe = load_model("KBlueLeaf/Kohaku-XL-Zeta", custom_vae=True)
 
 
 async def get_task():
     while True:
-        response = await client.get("http://localhost:8000/task")
+        response = await client.get(f"{config.SERVER_URL}/task")
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 404:
@@ -55,12 +56,12 @@ def generate_image(prompt: str | list[str] = "", seeds=-1):
 
 async def complete_task(task_id: str, image: Image.Image):
     img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format="PNG")
+    image.save(img_byte_arr, format="WEBP", quality=100, lossless=False)
     img_byte_arr = img_byte_arr.getvalue()
 
-    files = {"image": ("image.png", img_byte_arr, "image/png")}
+    files = {"image": ("image.webp", img_byte_arr, "image/webp")}
     response = await client.post(
-        f"http://localhost:8000/complete/{task_id}", files=files
+        f"{config.SERVER_URL}/complete/{task_id}", files=files
     )
     if response.status_code == 200:
         print(f"Task {task_id} completed successfully")
@@ -93,7 +94,7 @@ async def main():
             except Exception as e:
                 await asyncio.gather(
                     *[
-                        client.get(f"http://localhost:8000/reset/{task['task_id']}")
+                        client.get(f"{config.SERVER_URL}/reset/{task['task_id']}")
                         for task in tasks
                     ]
                 )

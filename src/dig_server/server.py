@@ -129,7 +129,7 @@ async def complete_task(
 
         if task.status != "processing":
             raise HTTPException(
-                status_code=400, detail="Task is not in processing state"
+                status_code=400, detail="Task is not in processing state: " + task.status
             )
 
         image.file.seek(0)
