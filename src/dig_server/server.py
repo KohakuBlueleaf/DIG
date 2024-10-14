@@ -135,11 +135,10 @@ async def complete_task(
 
         image.file.seek(0)
         img = Image.open(image.file)
-        result = io.BytesIO()
-        img.save(result, format="WEBP")
+        img.save(f"./images/{task_id}.webp", format="WEBP")
 
         task.status = "completed"
-        task.image_data = result.getvalue()
+        task.image_path = f"images/{task_id}.webp"
         task.save()
 
     return {"message": "Task completed successfully"}
@@ -154,10 +153,13 @@ async def download_image(task_id: str, db: SqliteDatabase = Depends(get_db)):
             status_code=404, detail="Image not found or task not completed"
         )
 
-    if not task.image_data:
+    if not task.image_path:
         raise HTTPException(status_code=404, detail="Image data not found")
 
-    return Response(content=task.image_data, media_type="image/webp")
+    with open(task.image_path, "rb") as f:
+        image_data = f.read()
+
+    return Response(content=image_data, media_type="image/webp")
 
 
 if __name__ == "__main__":

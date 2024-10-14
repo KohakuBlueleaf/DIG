@@ -15,14 +15,22 @@ class Task(BaseModel):
     prompt = TextField()
     extra_args = TextField(null=True)
     image_path = CharField(null=True)
-    image_data = BlobField(null=True)
     status = CharField(default="pending")  # pending, processing, completed
     created_at = DateTimeField(default=datetime.datetime.now)
 
 
 def initialize_db(db_path="db/image_tasks.db"):
     database = SqliteDatabase(
-        db_path, pragmas={"journal_mode": "wal", "synchronous": "normal"}
+        db_path, 
+        pragmas={
+            "journal_mode": "wal",
+            "cache_size": -1024 * 256,  # 256MB cache
+            "mmap_size": 1024 * 1024 * 1024,  # 1GB mmap
+            "synchronous": "normal",
+            "temp_store": "memory",
+            "foreign_keys": 1,
+            "ignore_check_constraints": 0,
+        }
     )
     database_proxy.initialize(database)
 
