@@ -21,7 +21,7 @@ class Task(BaseModel):
 
 def initialize_db(db_path="db/image_tasks.db"):
     database = SqliteDatabase(
-        db_path, 
+        db_path,
         pragmas={
             "journal_mode": "wal",
             "cache_size": -1024 * 256,  # 256MB cache
@@ -30,7 +30,7 @@ def initialize_db(db_path="db/image_tasks.db"):
             "temp_store": "memory",
             "foreign_keys": 1,
             "ignore_check_constraints": 0,
-        }
+        },
     )
     database_proxy.initialize(database)
 
